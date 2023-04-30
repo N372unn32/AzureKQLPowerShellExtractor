@@ -30,7 +30,8 @@ function Get-AzureKQLPowerShellExtract {
 
 
     $ResultRows= Search-AzGraph -Query $queryRows 
-    Write-Host $ResultRows
+    Write-Host Total $totalRows rows to be fetched  -ForegroundColor Red -BackgroundColor Blue
+    
 
     # Set the batch size (number of rows to fetch at a time)
     $batchSize = 1000
@@ -61,7 +62,7 @@ function Get-AzureKQLPowerShellExtract {
         $currentBatch++
         
 
-       # Write-Progress -Activity "Fetching data" -Status "Fetched $totalRows rows so far" -PercentComplete (($totalRows / $type["UsualRows"]) * 100) 
+        Write-Progress -Activity "Fetching data" -Status "Fetched $totalRows rows so far" -PercentComplete (($totalRows / $ResultRows) * 100) 
 
         $totalRows += $results.Count
     } while ($null -ne $skipToken)
