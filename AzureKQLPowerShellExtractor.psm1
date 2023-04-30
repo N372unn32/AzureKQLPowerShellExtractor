@@ -29,8 +29,10 @@ function Get-AzureKQLPowerShellExtract {
     $queryRows = $query + " |  summarize count() "
 
 
-    $ResultRows= Search-AzGraph -Query $queryRows 
-    Write-Host Total $totalRows rows to be fetched  -ForegroundColor Red -BackgroundColor Blue
+    $RowsResult= Search-AzGraph -Query $queryRows 
+$ResultRows
+
+    Write-Host Total $ResultRows rows to be fetched  -ForegroundColor Red -BackgroundColor Blue
     
 
     # Set the batch size (number of rows to fetch at a time)
