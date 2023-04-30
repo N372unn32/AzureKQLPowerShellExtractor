@@ -19,7 +19,7 @@ function Output {
         # Specify a default value for $VarB
         [switch]$Excel = $false,
         [switch]$CSV = $false,
-        [switch]$ResultPath ,
+        [string]$ResultPath ,
         [Parameter(Mandatory=$true)]
         $data
     )
