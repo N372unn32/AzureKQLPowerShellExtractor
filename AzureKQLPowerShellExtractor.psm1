@@ -22,7 +22,7 @@ function Output {
         [switch]$ResultPath ,
         [Parameter(Mandatory=$true)]
         $data
-
+    )
         
         
         if ($Excel) {
@@ -38,7 +38,7 @@ function Output {
             
             }
 
-    )
+    
     
 }
 
