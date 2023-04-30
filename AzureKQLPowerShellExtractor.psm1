@@ -30,7 +30,7 @@ function Get-AzureKQLPowerShellExtract {
 
 
     $RowsResult= Search-AzGraph -Query $queryRows 
-$ResultRows
+$ResultRows = $RowsResult.count_
 
     Write-Host Total $ResultRows rows to be fetched  -ForegroundColor Red -BackgroundColor Blue
     
