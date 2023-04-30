@@ -29,12 +29,13 @@ function Output {
         $P = $ResultPath + ".xlsx"
 
             $data | Export-Excel -Path $P -Append    
-        
+        Write-Host "p is $P
         }
         if ($CSV) {
             $P = $ResultPath + ".csv"
     
                 $data | Export-Csv -Path $P  -Append -NoTypeInformation 
+        Write-Host "p is $P
             
             }
 
@@ -47,7 +48,7 @@ function Get-AzureKQLPowerShellExtract {
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, Position = 0)]
         [string]$kqlQuery,
         [switch]$inExcel,
-        [switch]$o = ".\result",
+        [string]$o = ".\result",
         [switch]$inCSV = !$inExcel
     )
 
