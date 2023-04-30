@@ -26,6 +26,11 @@ function Get-AzureKQLPowerShellExtract {
 
     Write-host "Querying for data" #-ForegroundColor Blue -BackgroundColor Red
     $query = Get-Content $kqlQuery -Raw
+    $queryRows = $query + " |  summarize count() "
+
+
+    $ResultRows= Search-AzGraph -Query $queryRows 
+    Write-Host $ResultRows
 
     # Set the batch size (number of rows to fetch at a time)
     $batchSize = 1000
