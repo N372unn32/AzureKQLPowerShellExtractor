@@ -14,14 +14,45 @@ function Login () {
     }
 }
 
+function Output {
+    param(
+        # Specify a default value for $VarB
+        [switch]$Excel = $false,
+        [switch]$CSV = $false,
+        [switch]$ResultPath ,
+        [Parameter(Mandatory=$true)]
+        $data
+
+        
+        
+        if ($Excel) {
+        $P = $ResultPath + ".xlsx"
+
+            $data | Export-Excel -Path $P -Append    
+        
+        }
+        if ($CSV) {
+            $P = $ResultPath + ".csv"
+    
+                $data | Export-Csv -Path $P  -Append -NoTypeInformation 
+            
+            }
+
+    )
+    
+}
+
 function Get-AzureKQLPowerShellExtract {
     param(
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, Position = 0)]
-        [string]$kqlQuery
+        [string]$kqlQuery,
+        [switch]$inExcel,
+        [switch]$o = ".\result",
+        [switch]$inCSV = !$inExcel
     )
 
     Login
-    Write-Output "You entered: $kqlQuery"
+    #Write-Output "You entered: $kqlQuery"
 
 
     Write-host "Querying for data" #-ForegroundColor Blue -BackgroundColor Red
@@ -30,11 +61,9 @@ function Get-AzureKQLPowerShellExtract {
 
 
     $RowsResult= Search-AzGraph -Query $queryRows 
-$ResultRows = $RowsResult.count_
+    $ResultRows = $RowsResult.count_
 
     Write-Host Total $ResultRows rows to be fetched  -ForegroundColor Red -BackgroundColor Blue
-    
-
     # Set the batch size (number of rows to fetch at a time)
     $batchSize = 1000
 
@@ -55,7 +84,9 @@ $ResultRows = $RowsResult.count_
 
         # Add the results to the array of all results
         # $allResults += $results
-        $results | Export-Csv -Path .\result.csv -NoTypeInformation
+
+        Output -Excel $inExcel -CSV $inCSV -data $results -ResultPath $o
+       # $results | Export-Csv -Path .\result.csv -NoTypeInformation
 
         # Update the skip token for the next batch
         $skipToken = $results.SkipToken
@@ -70,7 +101,9 @@ $ResultRows = $RowsResult.count_
     } while ($null -ne $skipToken)
 
     # Display the total number of rows fetched
-    Write-Host Fetched a total of $totalRows rows  -ForegroundColor Red -BackgroundColor Blue
+    
+    Write-Host "Fetched a total of $totalRows rows available at $PWD.Path .\result.csv "-ForegroundColor Red -BackgroundColor Blue
+
 
 }
 
