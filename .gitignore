@@ -1,3 +1,5 @@
 test.ps1
 samplekql.ps1
 result.csv
+result.xlsx
+result.json
