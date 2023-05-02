@@ -29,7 +29,6 @@ function Get-AzureKQLPowerShellExtract {
     $ResultRows = $RowsResult.count_
     Write-Host Total $ResultRows rows to be fetched  -ForegroundColor Blue
     $batchSize = 1000
-    $currentBatch = 0
     $totalRows = 0
     $skipToken = $null
     $JSONdata = $null
@@ -40,7 +39,7 @@ function Get-AzureKQLPowerShellExtract {
 
 
     # Set initial values
-    $groupSize = 100
+  
     $throttleLimit = 15
     $throttleWindow = 5
     $remainingQuota = $throttleLimit
@@ -93,7 +92,8 @@ function Get-AzureKQLPowerShellExtract {
     }
 
     if ($inJSON -eq $true) {
-        $json = $JSONdata | ConvertTo-Json | Out-File "result.json"
+        $json = $JSONdata | ConvertTo-Json 
+        $json | Out-File "result.json"
     }
     Write-Host "Fetched a total of $totalRows rows available at "-ForegroundColor Green
 }
