@@ -50,65 +50,51 @@ $subscriptions = Get-AzSubscription
 $subscriptionIds = $subscriptions.Id
 
 # Grouping queries by subscription
-for ($i = 0; $i -le [Math]::Ceiling($subscriptionIds.Count / $groupSize); $i++) {
-    # Staggering queries
-    if ($remainingQuota -le 0) {
-        $timeSinceLastRequest = (Get-Date) - $lastRequestTime
-        if ($timeSinceLastRequest.TotalSeconds -lt $throttleWindow) {
-            Start-Sleep -Seconds ($throttleWindow - $timeSinceLastRequest.TotalSeconds)
+
+
+foreach ($ID in $subscriptionIds) {
+    
+    do {
+        # Staggering queries
+        if ($remainingQuota -le 0) {
+            $timeSinceLastRequest = (Get-Date) - $lastRequestTime
+            if ($timeSinceLastRequest.TotalSeconds -lt $throttleWindow) {
+                Start-Sleep -Seconds ($throttleWindow - $timeSinceLastRequest.TotalSeconds)
+            }
+            $remainingQuota = $throttleLimit
         }
-        $remainingQuota = $throttleLimit
-    }
-
-    # Select current group of subscriptions and query data
-    $currSubscriptionGroup = $subscriptionIds | Select-Object -Skip ($i * $groupSize) -First $groupSize
-    $results = Search-AzGraph -Query $query -First $batchSize -SkipToken $skipToken -Subscription $currSubscriptionGroup
-
-    # Output data
-    if ($inJSON -eq $true) {
-        $JSONdata += $results
-    }
-    if ($inExcel -eq $true) {
-        $P = "result.xlsx"
-        $results | Export-Excel -Path $P -Append
-    }
-    if ($inCSV -eq $true) {
-        $P = "result.csv"
-        $results | Export-Csv -Path $P -Append -NoTypeInformation
-    }
-
-    # Update skip token and progress
-    $skipToken = $results.SkipToken
-    if ($null -ne $skipToken) {
-        # Pagination: only update progress if there are more results to fetch
+    
+        # Query data
+        $results = Search-AzGraph -Query $query -First $batchSize -SkipToken $skipToken -Subscription 
+    
+        # Output data
+        if ($inJSON -eq $true) {
+            $JSONdata += $results
+        }
+        if ($inExcel -eq $true) {
+            $P = "result.xlsx"
+            $results | Export-Excel -Path $P -Append
+        }
+        if ($inCSV -eq $true) {
+            $P = "result.csv"
+            $results | Export-Csv -Path $P -Append -NoTypeInformation
+        }
+    
+        # Update skip token and progress
+        $skipToken = $results.SkipToken
         Write-Progress -Activity "Fetching data" -Status "Fetched $totalRows rows so far" -PercentComplete (($totalRows / $ResultRows) * 100)
-    }
-    else {
-        Write-Progress -Activity "Fetching data" -Completed
-    }
-    $totalRows += $results.Count
+        $totalRows += $results.Count
+    
+        # Update remaining quota and last request time
+        $remainingQuota--
+        $lastRequestTime = Get-Date
+    } while ($null -ne $skipToken)
+    
+}
 
-    # Update remaining quota and last request time
-    $remainingQuota--
-    $lastRequestTime = Get-Date
 
-    # Understand throttling headers: check response headers for remaining quota and reset time
-    if ($results.Headers.Contains("x-ms-user-quota-remaining")) {
-        [int]$headerQuota = 0
-        if ([int]::TryParse($results.Headers["x-ms-user-quota-remaining"], [ref]$headerQuota)) {
-            if ($headerQuota -lt 0) {
-                # Quota has been exceeded, wait for reset time before continuing
-                [timespan]$resetTime = [timespan]::Zero
-                if ([timespan]::TryParse($results.Headers["x-ms-user-quota-resets-after"], [ref]$resetTime)) {
-                    Start-Sleep -Seconds ([Math]::Ceiling($resetTime.TotalSeconds))
-                }
-            }
-            else {
-                # Update remaining quota with value from header
-                $remainingQuota = [Math]::Min($remainingQuota, $headerQuota)
-            }
-        }
-    }
+
+
 }
 
 
