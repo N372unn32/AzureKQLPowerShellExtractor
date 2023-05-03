@@ -30,7 +30,7 @@ function Get-AzureKQLPowerShellExtract {
     Write-Host Total $ResultRows rows to be fetched  -ForegroundColor Blue
     $batchSize = 1000
     $totalRows = 0
-    $skipToken = $null
+    #$skipToken = $null
     $JSONdata = $null
 
 
@@ -52,7 +52,8 @@ function Get-AzureKQLPowerShellExtract {
 
 
     foreach ($ID in $subscriptionIds) {
-    
+        $skipToken = $null
+        $retryCount = 0
         do {
             # Staggering queries
             if ($remainingQuota -le 0) {
@@ -62,31 +63,53 @@ function Get-AzureKQLPowerShellExtract {
                 }
                 $remainingQuota = $throttleLimit
             }
+
+
+            try {
+                $results = Search-AzGraph -Query $query -First $batchSize -SkipToken $skipToken -Subscription $ID
     
+                # Output data
+                if ($inJSON -eq $true) {
+                    $JSONdata += $results
+                }
+                if ($inExcel -eq $true) {
+                    $P = "result.xlsx"
+                    $results | Export-Excel -Path $P -Append
+                }
+                if ($inCSV -eq $true) {
+                    $P = "result.csv"
+                    $results | Export-Csv -Path $P -Append -NoTypeInformation
+                }
+        
+                # Update skip token and progress
+                $skipToken = $results.SkipToken
+                Write-Progress -Activity "Fetching data" -Status "Fetched $totalRows rows so far" -PercentComplete (($totalRows / $ResultRows) * 100)
+                $totalRows += $results.Count
+        
+                # Update remaining quota and last request time
+                $remainingQuota--
+                $lastRequestTime = Get-Date
+                $retryCount = 0
+            }
+            catch {
+                <#Do this if a terminating exception happens#>
+                Write-Error $_.Exception.Message
+
+                # Handle error and retry or skip batch if necessary
+                $retryCount++
+                if ($retryCount -gt 3) {
+                    Write-Warning "Failed to query data after $retryCount attempts. Skipping batch."
+                    break
+                }
+                else {
+                    Write-Warning "Error encountered during query. Retrying in 20 seconds..."
+                    Start-Sleep -Seconds 20
+                }
+
+
+            }
             # Query data
-            $results = Search-AzGraph -Query $query -First $batchSize -SkipToken $skipToken -Subscription $ID
-    
-            # Output data
-            if ($inJSON -eq $true) {
-                $JSONdata += $results
-            }
-            if ($inExcel -eq $true) {
-                $P = "result.xlsx"
-                $results | Export-Excel -Path $P -Append
-            }
-            if ($inCSV -eq $true) {
-                $P = "result.csv"
-                $results | Export-Csv -Path $P -Append -NoTypeInformation
-            }
-    
-            # Update skip token and progress
-            $skipToken = $results.SkipToken
-            Write-Progress -Activity "Fetching data" -Status "Fetched $totalRows rows so far" -PercentComplete (($totalRows / $ResultRows) * 100)
-            $totalRows += $results.Count
-    
-            # Update remaining quota and last request time
-            $remainingQuota--
-            $lastRequestTime = Get-Date
+           
         } while ($null -ne $skipToken)
     
     }
@@ -95,7 +118,7 @@ function Get-AzureKQLPowerShellExtract {
         $json = $JSONdata | ConvertTo-Json 
         $json | Out-File "result.json"
     }
-    Write-Host "Fetched a total of $totalRows rows available at "-ForegroundColor Green
+    Write-Host "Fetched a total of $totalRows rows available at $PWD "-ForegroundColor Green
 }
 
 
