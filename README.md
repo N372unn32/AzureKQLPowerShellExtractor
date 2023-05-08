@@ -8,16 +8,29 @@ This module helps mitigate the export limitation of 51000 rows at a time in ARG 
 
 For large output, the module has mitigations in place for throttling.
 
+## Requirements
+
+
 ## Steps
 
 ### Using PowerShell Core
 
 
 
+
+<pre><code class="language-powershell">
+
+#Import the PowerShell Module
 Import-Module .\AzureKQLPowerShellExtractor.psm1 -Force -Verbose
 
-Get-AzureKQLPowerShellExtract -kqlQueryPath .\sample.kql
+# run " Get-AzureKQLPowerShellExtract -h " for help and examples
 
+# Call the Get-AzureKQLPowerShellExtract command and supply necessary arguments
+# Replace ".\sample.kql" with the path to your ARG KQL Query. Simply create a text file with your KQL query as its content
+Get-AzureKQLPowerShellExtract -kqlQueryPath .\sample.kql -inCSV
+
+
+</code></pre>
 
 
 
