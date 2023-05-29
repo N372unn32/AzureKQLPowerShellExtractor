@@ -1,9 +1,3 @@
 resourcecontainers
 | where type == "microsoft.resources/subscriptions/resourcegroups"
 | project resourceGroup = name, subscriptionId
-| join kind=leftouter (
-    ResourceContainers
-    | where type=='microsoft.resources/subscriptions'
-    | project subscriptionId, subscriptionName=name
-) on subscriptionId
-| project-away subscriptionId1
