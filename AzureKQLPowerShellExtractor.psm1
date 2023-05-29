@@ -29,9 +29,8 @@ function Get-AzureKQLPowerShellExtract {
     $ResultRows = $RowsResult.count_
     Write-Host Total $ResultRows rows to be fetched  -ForegroundColor Blue
     $batchSize = 1000
-    $currentBatch = 0
     $totalRows = 0
-    $skipToken = $null
+    #$skipToken = $null
     $JSONdata = $null
 
 
@@ -39,36 +38,126 @@ function Get-AzureKQLPowerShellExtract {
 
 
 
+    # Set initial values
+  
+    $throttleLimit = 15
+    $throttleWindow = 5
+    $remainingQuota = $throttleLimit
+    $lastRequestTime = Get-Date
+
+    $subscriptions = Get-AzSubscription
+    $subscriptionIds = $subscriptions.Id
+
+    # Grouping queries by subscription
+
+
+    foreach ($ID in $subscriptionIds) {
+        $skipToken = $null
+        $retryCount = 0
+        do {
+            # Staggering queries
+            if ($remainingQuota -le 0) {
+                $timeSinceLastRequest = (Get-Date) - $lastRequestTime
+                if ($timeSinceLastRequest.TotalSeconds -lt $throttleWindow) {
+                    Start-Sleep -Seconds ($throttleWindow - $timeSinceLastRequest.TotalSeconds)
+                }
+                $remainingQuota = $throttleLimit
+            }
+
+
+            try {
+                $results = Search-AzGraph -Query $query -First $batchSize -SkipToken $skipToken -Subscription $ID
     
-    do {
-        $results = Search-AzGraph -Query $query -First $batchSize -SkipToken $skipToken
-        #  Output -data $results -Excel $inExcel -CSV $inCSV 
+                # Output data
+                if ($inJSON -eq $true) {
+                    $JSONdata += $results
+                }
+                if ($inExcel -eq $true) {
+                    $P = "result.xlsx"
+                    $results | Export-Excel -Path $P -Append
+                }
+                if ($inCSV -eq $true) {
+                    $P = "result.csv"
+                    $results | Export-Csv -Path $P -Append -NoTypeInformation
+                }
+        
+                # Update skip token and progress
+                $skipToken = $results.SkipToken
+                Write-Progress -Activity "Fetching data" -Status "Fetched $totalRows rows so far" -PercentComplete (($totalRows / $ResultRows) * 100)
+                $totalRows += $results.Count
+        
+                # Update remaining quota and last request time
+                $remainingQuota--
+                $lastRequestTime = Get-Date
+                $retryCount = 0
+            }
+            catch {
+                <#Do this if a terminating exception happens#>
+                Write-Error $_.Exception.Message
 
-        if ($inJSON -eq $true) {
-            $JSONdata += $results
+                # Handle error and retry or skip batch if necessary
+                $retryCount++
+                if ($retryCount -gt 3) {
+                    Write-Warning "Failed to query data after $retryCount attempts. Skipping batch."
+                    break
+                }
+                else {
+                    Write-Warning "Error encountered during query. Retrying in 20 seconds..."
+                    Start-Sleep -Seconds 20
+                }
 
-        }
-        if ($inExcel -eq $true) {
-            
-            $P = "result.xlsx"
-            $results | Export-Excel -Path $P -Append    
-        }
-        if ($inCSV -eq $true) {
-            $P = "result.csv"  
-            $results | Export-Csv -Path $P  -Append -NoTypeInformation 
-        }
 
-        $skipToken = $results.SkipToken
-        $currentBatch++
-        Write-Progress -Activity "Fetching data" -Status "Fetched $totalRows rows so far" -PercentComplete (($totalRows / $ResultRows) * 100) 
-        $totalRows += $results.Count
-    } while ($null -ne $skipToken)
+            }
+            # Query data
+           
+        } while ($null -ne $skipToken)
+    
+    }
 
     if ($inJSON -eq $true) {
-        $json = $JSONdata | ConvertTo-Json | Out-File "result.json"
+        $json = $JSONdata | ConvertTo-Json 
+        $json | Out-File "result.json"
     }
-    Write-Host "Fetched a total of $totalRows rows available at "-ForegroundColor Green
+    Write-Host "Fetched a total of $totalRows rows available at $PWD "-ForegroundColor Green
 }
+
+
+
+
+
+
+
+
+
+
+
+
+    
+# do {
+#     $results = Search-AzGraph -Query $query -First $batchSize -SkipToken $skipToken
+#     #  Output -data $results -Excel $inExcel -CSV $inCSV 
+
+#     if ($inJSON -eq $true) {
+#         $JSONdata += $results
+
+#     }
+#     if ($inExcel -eq $true) {
+            
+#         $P = "result.xlsx"
+#         $results | Export-Excel -Path $P -Append    
+#     }
+#     if ($inCSV -eq $true) {
+#         $P = "result.csv"  
+#         $results | Export-Csv -Path $P  -Append -NoTypeInformation 
+#     }
+
+#     $skipToken = $results.SkipToken
+#     $currentBatch++
+#     Write-Progress -Activity "Fetching data" -Status "Fetched $totalRows rows so far" -PercentComplete (($totalRows / $ResultRows) * 100) 
+#     $totalRows += $results.Count
+# } while ($null -ne $skipToken)
+
+
 
 
 function Login () {
