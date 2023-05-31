@@ -10,7 +10,7 @@ For large output, the module has mitigations in place for throttling.
 
 ## Requirements
 
-PowerShell Code
+PowerShell Core
 
 Azure PowerShell module
 
