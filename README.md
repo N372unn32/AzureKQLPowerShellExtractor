@@ -8,6 +8,13 @@ This module helps mitigate the export limitation of 51000 rows at a time in ARG 
 
 For large output, the module has mitigations in place for throttling.
 
+
+## References
+
+| Description | Link |
+| ------ | ------ |
+| Brief Documetation  | [Medium Blog](https://medium.com/@MTushar/extracting-large-azure-resource-graph-data-using-azurekqlpowershellextractor-d310b1601910) |
+
 ## Requirements
 
 PowerShell Core
